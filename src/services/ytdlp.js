@@ -18,6 +18,10 @@ function downloadAudio(url, outputDir, format = 'mp3') {
       // Requires outbound network access to GitHub from this container.
       '--js-runtimes', 'node',
       '--remote-components', 'ejs:github',
+      // yt-dlp's own suggested fix for SSLV3_ALERT_HANDSHAKE_FAILURE —
+      // seen when the connection path (often a proxy exit node) doesn't
+      // support RFC 5746 secure renegotiation.
+      '--legacy-server-connect',
     ];
 
     if (config.proxyUrl) {
