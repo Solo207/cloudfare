@@ -42,6 +42,9 @@ RUN mkdir -p /app/temp /app/uploads
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# EXPOSE is documentation only — it does not control routing. The app
+# actually binds to whatever PORT Easypanel injects at runtime (see
+# src/config/env.js), which may differ from this value.
 EXPOSE 3000
 
 CMD ["node", "src/server.js"]
