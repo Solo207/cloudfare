@@ -11,6 +11,10 @@ function downloadAudio(url, outputDir, format = 'mp3') {
       '--audio-format', format,
       '-o', outputTemplate,
       '--no-playlist',
+      // -v surfaces the [jsc]/remote-component debug lines that explain
+      // exactly what's happening with the challenge solver — without
+      // this, the real cause was getting hidden.
+      '-v',
       // Solves YouTube's "n challenge" JS bot-check: --js-runtimes gives
       // yt-dlp a place to run the solver (the Node.js already in this
       // image), --remote-components ejs:github lets it fetch the actual
@@ -43,7 +47,10 @@ function downloadAudio(url, outputDir, format = 'mp3') {
     proc.on('error', reject);
     proc.on('close', (code) => {
       if (code !== 0) {
-        return reject(new Error(`yt-dlp exited with code ${code}: ${stderr.slice(-500)}`));
+        // Full output for now (was silently truncated to 500 chars,
+        // which was cutting off the actual diagnostic lines) — trim
+        // this back down once the real cause is confirmed.
+        return reject(new Error(`yt-dlp exited with code ${code}: ${stderr}`));
       }
       const files = fs.readdirSync(outputDir);
       const produced = files.find((f) => f.endsWith(`.${format}`));
