@@ -11,10 +11,13 @@ function downloadAudio(url, outputDir, format = 'mp3') {
       '--audio-format', format,
       '-o', outputTemplate,
       '--no-playlist',
-      // Solves YouTube's "n challenge" JS bot-check using the Node.js
-      // runtime already present in this image (node:20-slim) — no extra
-      // plugin or runtime install needed.
+      // Solves YouTube's "n challenge" JS bot-check: --js-runtimes gives
+      // yt-dlp a place to run the solver (the Node.js already in this
+      // image), --remote-components ejs:github lets it fetch the actual
+      // solver script from github.com/yt-dlp/ejs (cached after first run).
+      // Requires outbound network access to GitHub from this container.
       '--js-runtimes', 'node',
+      '--remote-components', 'ejs:github',
     ];
 
     if (config.proxyUrl) {
