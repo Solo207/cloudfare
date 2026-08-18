@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:22-slim
 
 # ffmpeg for audio processing, python3/pip so yt-dlp can be installed and
 # later updated via the protected /admin/update-ytdlp endpoint.
@@ -12,9 +12,10 @@ RUN apt-get update && apt-get install -y \
 # --break-system-packages needed on Debian's PEP 668-managed Python.
 RUN pip3 install --break-system-packages --no-cache-dir yt-dlp
 
-# No separate JS-challenge-solver plugin needed: this image already has a
-# real Node.js runtime (it's node:20-slim), and src/services/ytdlp.js
-# points yt-dlp at it directly via --js-runtimes.
+# No separate JS-challenge-solver plugin needed: this image has a real
+# Node.js runtime (node:22-slim — yt-dlp requires >=22 as of its June
+# 2026 release; Node 20 is rejected as unsupported), and
+# src/services/ytdlp.js points yt-dlp at it directly via --js-runtimes.
 #
 # Prefetch and cache the EJS challenge-solver script (from
 # github.com/yt-dlp/ejs) here at BUILD time, using the build environment's
