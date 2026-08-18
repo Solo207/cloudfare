@@ -15,6 +15,17 @@ RUN pip3 install --break-system-packages --no-cache-dir yt-dlp
 # No separate JS-challenge-solver plugin needed: this image already has a
 # real Node.js runtime (it's node:20-slim), and src/services/ytdlp.js
 # points yt-dlp at it directly via --js-runtimes.
+#
+# Prefetch and cache the EJS challenge-solver script (from
+# github.com/yt-dlp/ejs) here at BUILD time, using the build environment's
+# direct network — not the runtime proxy, which may not reliably reach
+# GitHub from every exit node. This bakes the script into the image so
+# requests don't depend on fetching it live through the proxy. The
+# --remote-components flag stays in ytdlp.js too, so a runtime refetch is
+# still attempted if this cache ever goes stale.
+RUN yt-dlp --js-runtimes node --remote-components ejs:github \
+    --simulate --no-warnings "https://www.youtube.com/watch?v=jNQXAC9IVRw" \
+    || echo "EJS prefetch failed at build time — will rely on runtime fetch"
 
 WORKDIR /app
 
