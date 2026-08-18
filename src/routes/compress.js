@@ -5,7 +5,7 @@ const multer = require('multer');
 const apiKeyAuth = require('../middleware/auth');
 const { createJobDir, cleanupDir } = require('../lib/tempStorage');
 const { getFreeDiskMB } = require('../lib/diskCheck');
-const { compressToOgg } = require('../services/ffmpeg');
+const { compressToOpus } = require('../services/ffmpeg');
 const config = require('../config/env');
 
 const router = express.Router();
@@ -28,7 +28,9 @@ router.post('/compress', apiKeyAuth, upload.single('audio'), async (req, res, ne
   }
 
   const uploadedPath = req.file.path;
-  const quality = req.body.quality ? parseInt(req.body.quality, 10) : 6;
+  // Defaults to 16kbps mono — deliberately aggressive, tuned for
+  // spoken-word content delivered over WhatsApp, not music quality.
+  const bitrateKbps = req.body.bitrateKbps ? parseInt(req.body.bitrateKbps, 10) : 16;
   let jobDir;
 
   try {
@@ -41,12 +43,12 @@ router.post('/compress', apiKeyAuth, upload.single('audio'), async (req, res, ne
     const job = createJobDir();
     jobDir = job.dir;
 
-    const outputPath = path.join(jobDir, 'output.ogg');
-    await compressToOgg(uploadedPath, outputPath, quality);
+    const outputPath = path.join(jobDir, 'output.opus');
+    await compressToOpus(uploadedPath, outputPath, bitrateKbps);
 
     const stream = fs.createReadStream(outputPath);
-    res.setHeader('Content-Type', 'audio/ogg');
-    res.setHeader('Content-Disposition', 'attachment; filename="compressed.ogg"');
+    res.setHeader('Content-Type', 'audio/opus');
+    res.setHeader('Content-Disposition', 'attachment; filename="compressed.opus"');
 
     const cleanup = () => {
       cleanupDir(jobDir);
@@ -75,3 +77,4 @@ router.use((err, req, res, next) => {
 });
 
 module.exports = router;
+

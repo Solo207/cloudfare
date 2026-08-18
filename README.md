@@ -13,8 +13,8 @@ Body (JSON): `{ "url": "<youtube-url>", "format": "mp3" }` (`format` optional, d
 Response: streamed audio file.
 
 ### `POST /compress`
-Multipart form: `audio` (file, up to `MAX_UPLOAD_MB`), `quality` (optional, 0-10, default 6)
-Response: streamed `.ogg` file.
+Multipart form: `audio` (file, up to `MAX_UPLOAD_MB`), `bitrateKbps` (optional, default 16)
+Response: streamed `.opus` file (mono, libopus).
 
 ### `POST /admin/update-ytdlp`
 Runs `pip3 install -U yt-dlp` on the running container. No body required.

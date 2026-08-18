@@ -1,15 +1,18 @@
 const { spawn } = require('child_process');
 
-// quality: libvorbis -q:a scale, 0 (worst) - 10 (best). 6 is a solid
-// default balance of size vs quality.
-function compressToOgg(inputPath, outputPath, quality = 6) {
+// Opus (not Vorbis) in an Ogg container, mono, low constant bitrate —
+// matches a known-working reference config tuned for spoken/voice
+// content. 16kbps is intentionally aggressive; this isn't music quality,
+// it's optimized for small file size over WhatsApp.
+function compressToOpus(inputPath, outputPath, bitrateKbps = 16) {
   return new Promise((resolve, reject) => {
     const args = [
       '-y',
       '-i', inputPath,
       '-vn',
-      '-c:a', 'libvorbis',
-      '-q:a', String(quality),
+      '-c:a', 'libopus',
+      '-ac', '1',
+      '-b:a', `${bitrateKbps}k`,
       outputPath,
     ];
 
@@ -30,4 +33,4 @@ function compressToOgg(inputPath, outputPath, quality = 6) {
   });
 }
 
-module.exports = { compressToOgg };
+module.exports = { compressToOpus };
