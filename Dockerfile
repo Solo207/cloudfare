@@ -12,11 +12,9 @@ RUN apt-get update && apt-get install -y \
 # --break-system-packages needed on Debian's PEP 668-managed Python.
 RUN pip3 install --break-system-packages --no-cache-dir yt-dlp
 
-# ytdlp-jsc: solves YouTube's "n challenge" JS bot-check using an embedded
-# JS engine (no external Node/Deno runtime or live script fetch needed).
-# Without this, yt-dlp can fail with "n challenge solving failed".
-RUN mkdir -p /root/.yt-dlp/plugins \
-    && pip3 install --break-system-packages --no-cache-dir --target /root/.yt-dlp/plugins ytdlp-jsc
+# No separate JS-challenge-solver plugin needed: this image already has a
+# real Node.js runtime (it's node:20-slim), and src/services/ytdlp.js
+# points yt-dlp at it directly via --js-runtimes.
 
 WORKDIR /app
 

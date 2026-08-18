@@ -11,6 +11,10 @@ function downloadAudio(url, outputDir, format = 'mp3') {
       '--audio-format', format,
       '-o', outputTemplate,
       '--no-playlist',
+      // Solves YouTube's "n challenge" JS bot-check using the Node.js
+      // runtime already present in this image (node:20-slim) — no extra
+      // plugin or runtime install needed.
+      '--js-runtimes', 'node',
     ];
 
     if (config.proxyUrl) {
