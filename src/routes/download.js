@@ -10,7 +10,7 @@ const config = require('../config/env');
 const router = express.Router();
 
 router.post('/download', apiKeyAuth, async (req, res, next) => {
-  const { url, format } = req.body || {};
+  const { url, format, forceProxy } = req.body || {};
   if (!url) {
     return res.status(400).json({ error: 'Missing "url" in request body' });
   }
@@ -25,7 +25,7 @@ router.post('/download', apiKeyAuth, async (req, res, next) => {
     const job = createJobDir();
     jobDir = job.dir;
 
-    const filePath = await downloadAudio(url, jobDir, format || 'mp3');
+    const filePath = await downloadAudio(url, jobDir, format || 'mp3', Boolean(forceProxy), job.jobId);
 
     const stream = fs.createReadStream(filePath);
     res.setHeader('Content-Type', 'audio/mpeg');

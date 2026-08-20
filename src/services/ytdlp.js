@@ -3,7 +3,20 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../config/env');
 
-function runYtDlp(url, outputDir, format, useProxy) {
+// DataImpulse (and most residential proxy providers) key sticky sessions
+// off a session id embedded in the proxy username, using a
+// __sessid.<value> parameter. Reusing the same session id pins every
+// request in that download (metadata fetch + every CDN fragment) to one
+// IP for ~30 min — this looks like one continuous viewer instead of a
+// different residential IP per fragment, which is what rotating (the
+// previous setup) was actually doing.
+function buildStickyProxyUrl(baseProxyUrl, sessionId) {
+  const parsed = new URL(baseProxyUrl);
+  parsed.username = `${parsed.username}__sessid.${sessionId}`;
+  return parsed.toString();
+}
+
+function runYtDlp(url, outputDir, format, useProxy, sessionId) {
   return new Promise((resolve, reject) => {
     const outputTemplate = path.join(outputDir, '%(id)s.%(ext)s');
     const args = [
@@ -20,7 +33,10 @@ function runYtDlp(url, outputDir, format, useProxy) {
     ];
 
     if (useProxy && config.proxyUrl) {
-      args.push('--proxy', config.proxyUrl);
+      const proxyUrl = sessionId
+        ? buildStickyProxyUrl(config.proxyUrl, sessionId)
+        : config.proxyUrl;
+      args.push('--proxy', proxyUrl);
     }
     if (config.cookiesPath) {
       args.push('--cookies', config.cookiesPath);
@@ -58,16 +74,39 @@ function runYtDlp(url, outputDir, format, useProxy) {
 // issues). Falls back to the configured proxy only if that fails —
 // keeps the proxy as insurance against future IP-based blocking
 // without paying its reliability cost on every request.
-async function downloadAudio(url, outputDir, format = 'mp3') {
+//
+// jobId (when provided) becomes the sticky session id — sticky for the
+// duration of THIS download's fragments, but a fresh IP on the next job,
+// so one bad pinned IP can't take down every future request.
+//
+// forceProxy=true skips the direct attempt entirely and goes straight
+// to the proxy — for deliberately testing whether the proxy path still
+// works, without waiting for a real direct-connection failure first.
+async function downloadAudio(url, outputDir, format = 'mp3', forceProxy = false, jobId = null) {
+  if (forceProxy) {
+    if (!config.proxyUrl) {
+      throw new Error('forceProxy was set but YTDLP_PROXY_URL is not configured');
+    }
+    return runYtDlp(url, outputDir, format, true, jobId);
+  }
+
   try {
-    return await runYtDlp(url, outputDir, format, false);
+    return await runYtDlp(url, outputDir, format, false, jobId);
   } catch (directErr) {
+    // Logged even on eventual success — this is the signal to watch for
+    // a rising pattern of direct-connection blocking over time, before
+    // it becomes a user-facing outage.
+    console.warn(`[ytdlp] Direct attempt failed, falling back to proxy: ${directErr.message.slice(0, 300)}`);
+
     if (!config.proxyUrl) {
       throw directErr;
     }
     try {
-      return await runYtDlp(url, outputDir, format, true);
+      const result = await runYtDlp(url, outputDir, format, true, jobId);
+      console.warn('[ytdlp] Proxy fallback succeeded');
+      return result;
     } catch (proxyErr) {
+      console.error('[ytdlp] Proxy fallback also failed — both paths down');
       throw new Error(
         `Direct attempt failed: ${directErr.message}\nProxy attempt also failed: ${proxyErr.message}`,
       );
